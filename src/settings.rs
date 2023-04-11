@@ -43,6 +43,8 @@ pub struct CameraSettings {
     pub width: u32,  // 0 = max
     pub height: u32, // 0 = max
     pub iso: ISO,
+    pub sensor_mode: u32,
+    pub quality:u32, // range 0..100, default to 95
     pub zero_copy: bool,
     /// `use_encoder` will go away
     pub use_encoder: bool,
@@ -55,6 +57,8 @@ impl Default for CameraSettings {
             width: 0,
             height: 0,
             iso: ISO_AUTO,
+            sensor_mode: 0,
+            quality: 95,
             zero_copy: false,
             use_encoder: true,
         }

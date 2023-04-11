@@ -319,9 +319,9 @@ impl SeriousCamera {
 
     pub unsafe fn set_buffer_callback(&mut self, sender: SenderKind) {
         let port = if self.use_encoder {
-            (*self.encoder.unwrap().as_ref().output.offset(0))
+            *self.encoder.unwrap().as_ref().output.offset(0)
         } else {
-            (*self.camera.as_ref().output.offset(MMAL_CAMERA_CAPTURE_PORT))
+            *self.camera.as_ref().output.offset(MMAL_CAMERA_CAPTURE_PORT)
         };
 
         let userdata = Userdata {
@@ -413,6 +413,22 @@ impl SeriousCamera {
             }
 
             let control = self.camera.as_ref().control;
+
+            // Add the parameter to adjust the sensor mode
+            match ffi::mmal_port_parameter_set_uint32(
+                control,
+                ffi::MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG,
+                settings.sensor_mode,
+            ) {
+                MMAL_STATUS_T::MMAL_SUCCESS => (),
+                status => {
+                    return Err(MmalError::with_status(
+                        "Unable to set Sensor Mode".to_owned(),
+                        status,
+                    )
+                    .into())
+                }
+            };
 
             // TODO:
             //raspicamcontrol_set_all_parameters(camera, &state->camera_parameters);
@@ -547,7 +563,7 @@ impl SeriousCamera {
             let encoder_out_port_ptr =
                 *(self.encoder.unwrap().as_ref().output.offset(0) as *mut *mut ffi::MMAL_PORT_T);
             let encoder_in_port = *encoder_in_port_ptr;
-            let mut encoder_out_port = *encoder_out_port_ptr;
+            let mut encoder_out_port = *encoder_out_port_ptr;   
 
             // We want same format on input and output
             ffi::mmal_format_copy(encoder_out_port.format, encoder_in_port.format);
@@ -565,21 +581,12 @@ impl SeriousCamera {
                 encoder_out_port.buffer_num = encoder_out_port.buffer_num_min;
             }
 
-            status = ffi::mmal_port_format_commit(encoder_out_port_ptr);
-            if status != MMAL_STATUS_T::MMAL_SUCCESS {
-                return Err(MmalError::with_status(
-                    "Unable to set encoder output port format".to_owned(),
-                    status,
-                )
-                .into());
-            }
-
             if encoding == ffi::MMAL_ENCODING_JPEG || encoding == ffi::MMAL_ENCODING_MJPEG {
                 // Set the JPEG quality level
                 status = ffi::mmal_port_parameter_set_uint32(
                     encoder_out_port_ptr,
                     ffi::MMAL_PARAMETER_JPEG_Q_FACTOR,
-                    90,
+                    settings.quality,
                 );
                 if status != MMAL_STATUS_T::MMAL_SUCCESS {
                     return Err(MmalError::with_status(
@@ -602,6 +609,15 @@ impl SeriousCamera {
                     )
                     .into());
                 }
+            }
+            
+            status = ffi::mmal_port_format_commit(encoder_out_port_ptr);
+            if status != MMAL_STATUS_T::MMAL_SUCCESS {
+                return Err(MmalError::with_status(
+                    "Unable to set encoder output port format".to_owned(),
+                    status,
+                )
+                .into());
             }
 
             // TODO: thumbnails
@@ -719,9 +735,9 @@ impl SeriousCamera {
                     self.preview = Some(NonNull::new(&mut *preview_ptr).unwrap());
                     Ok(())
                 }
-                s => Err(MmalError::with_status(
+                status => Err(MmalError::with_status(
                     "Unable to create null sink for preview".to_owned(),
-                    s,
+                    status,
                 )
                 .into()),
             }
@@ -1229,11 +1245,9 @@ impl SimpleCamera {
     pub async fn take_one_async(&mut self) -> Result<Vec<u8>, CameraError> {
         let receiver = self.serious.take_async()?;
         let future = receiver
-            .fold(Vec::new(), |mut acc, buf| {
-                async move {
-                    acc.extend(buf.get_bytes());
-                    acc
-                }
+            .fold(Vec::new(), |mut acc, buf| async move {
+                acc.extend(buf.get_bytes());
+                acc
             })
             .map(Ok);
 
