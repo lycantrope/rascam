@@ -375,7 +375,7 @@ impl SeriousCamera {
             match status {
                 MMAL_STATUS_T::MMAL_SUCCESS => Ok(()),
                 s => Err(MmalError::with_status(
-                    "Unable to set control port parmaeter".to_owned(),
+                    "Unable to set control port parameter".to_owned(),
                     s,
                 )
                 .into()),
@@ -563,7 +563,7 @@ impl SeriousCamera {
             let encoder_out_port_ptr =
                 *(self.encoder.unwrap().as_ref().output.offset(0) as *mut *mut ffi::MMAL_PORT_T);
             let encoder_in_port = *encoder_in_port_ptr;
-            let mut encoder_out_port = *encoder_out_port_ptr;   
+            let mut encoder_out_port = *encoder_out_port_ptr;
 
             // We want same format on input and output
             ffi::mmal_format_copy(encoder_out_port.format, encoder_in_port.format);
@@ -610,7 +610,7 @@ impl SeriousCamera {
                     .into());
                 }
             }
-            
+
             status = ffi::mmal_port_format_commit(encoder_out_port_ptr);
             if status != MMAL_STATUS_T::MMAL_SUCCESS {
                 return Err(MmalError::with_status(
@@ -812,6 +812,66 @@ impl SeriousCamera {
         }
 
         Ok(())
+    }
+
+    pub fn set_shutter_speed(&mut self, shutter_speed: u32) -> Result<(), CameraError> {
+        let status = unsafe {
+            ffi::mmal_port_parameter_set_uint32(
+                self.camera.as_ref().control,
+                ffi::MMAL_PARAMETER_SHUTTER_SPEED as u32,
+                shutter_speed, // 0 = auto
+            )
+        };
+
+        match status {
+            ffi::MMAL_STATUS_T::MMAL_SUCCESS => Ok(()),
+            status => {
+                Err(MmalError::with_status("Unable to set shutter speed".to_owned(), status).into())
+            }
+        }
+    }
+
+    pub fn set_awb_gain(&mut self, red_gain: f32, blue_gain: f32) -> Result<(), CameraError> {
+        let mut param: ffi::MMAL_PARAMETER_AWB_GAINS_T = unsafe { mem::zeroed() };
+        param.hdr.id = ffi::MMAL_PARAMETER_CUSTOM_AWB_GAINS as u32;
+        param.hdr.size = mem::size_of::<ffi::MMAL_PARAMETER_AWB_GAINS_T>() as u32;
+        param.r_gain.num = (red_gain * 65536.0).round() as i32;
+        param.b_gain.num = (blue_gain * 65536.0).round() as i32;
+        param.r_gain.den = 65536;
+        param.b_gain.den = 65536;
+
+        let status =
+            unsafe { ffi::mmal_port_parameter_set(self.camera.as_ref().control, &param.hdr) };
+
+        match status {
+            ffi::MMAL_STATUS_T::MMAL_SUCCESS => Ok(()),
+            status => {
+                Err(MmalError::with_status("Unable to set awb gain".to_owned(), status).into())
+            }
+        }
+    }
+
+    pub fn get_awb_gain(&mut self) -> Result<(f32, f32), CameraError> {
+        // TODO Current only return a dummy values,
+        Ok((1.0, 1.0))
+    }
+    pub fn set_awb_mode(&mut self, awb_mode: settings::AWBMode) -> Result<(), CameraError> {
+        let mut param: ffi::MMAL_PARAMETER_AWBMODE_T = unsafe { mem::zeroed() };
+        param.hdr.id = ffi::MMAL_PARAMETER_AWB_MODE as u32;
+        param.hdr.size = mem::size_of::<ffi::MMAL_PARAMETER_AWBMODE_T>() as u32;
+
+        param.value = awb_mode.value();
+
+        let status =
+            unsafe { ffi::mmal_port_parameter_set(self.camera.as_ref().control, &param.hdr) };
+
+        match status {
+            MMAL_STATUS_T::MMAL_SUCCESS => {
+                self.encoder_output_port_enabled = true;
+                Ok(())
+            }
+            s => Err(MmalError::with_status("Unable to set awb mode".to_owned(), s).into()),
+        }
     }
 
     fn do_take(

@@ -1,6 +1,7 @@
 use mmal_sys as ffi;
 
 use std::os::raw::c_uint;
+use std::str::FromStr;
 
 pub type ISO = u32;
 
@@ -44,7 +45,7 @@ pub struct CameraSettings {
     pub height: u32, // 0 = max
     pub iso: ISO,
     pub sensor_mode: u32,
-    pub quality:u32, // range 0..100, default to 95
+    pub quality: u32, // range 0..100, default to 95
     pub zero_copy: bool,
     /// `use_encoder` will go away
     pub use_encoder: bool,
@@ -61,6 +62,62 @@ impl Default for CameraSettings {
             quality: 95,
             zero_copy: false,
             use_encoder: true,
+        }
+    }
+}
+
+#[non_exhaustive]
+pub enum AWBMode {
+    OFF,
+    AUTO,
+    SUNLIGHT,
+    CLOUDY,
+    SHADE,
+    TUNGSTEN,
+    FLUORESCENT,
+    INCANDESCENT,
+    FLASH,
+    HORIZON,
+    GREYWORLD,
+    MAX,
+}
+
+impl AWBMode {
+    pub fn value(self) -> ffi::MMAL_PARAM_AWBMODE_T {
+        match self {
+            Self::OFF => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_OFF,
+            Self::AUTO => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_AUTO,
+            Self::SUNLIGHT => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_SUNLIGHT,
+            Self::CLOUDY => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_CLOUDY,
+            Self::SHADE => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_SHADE,
+            Self::TUNGSTEN => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_TUNGSTEN,
+            Self::FLUORESCENT => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_FLUORESCENT,
+            Self::INCANDESCENT => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_INCANDESCENT,
+            Self::FLASH => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_FLASH,
+            Self::HORIZON => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_HORIZON,
+            Self::GREYWORLD => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_GREYWORLD,
+            Self::MAX => ffi::MMAL_PARAM_AWBMODE_T_MMAL_PARAM_AWBMODE_MAX,
+        }
+    }
+}
+
+impl FromStr for AWBMode {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "OFF" => Ok(Self::OFF),
+            "AUTO" => Ok(Self::AUTO),
+            "SUNLIGHT" => Ok(Self::SUNLIGHT),
+            "CLOUDY" => Ok(Self::CLOUDY),
+            "SHADE" => Ok(Self::SHADE),
+            "TUNGSTEN" => Ok(Self::TUNGSTEN),
+            "FLUORESCENT" => Ok(Self::FLUORESCENT),
+            "INCANDESCENT" => Ok(Self::INCANDESCENT),
+            "FLASH" => Ok(Self::FLASH),
+            "HORIZON" => Ok(Self::HORIZON),
+            "GREYWORLD" => Ok(Self::GREYWORLD),
+            "MAX" => Ok(Self::MAX),
+            _ => Err(()),
         }
     }
 }
