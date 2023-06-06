@@ -441,7 +441,7 @@ impl SeriousCamera {
 
             let mut format = preview_port.format;
 
-            if self.use_encoder {
+            if !self.use_encoder {
                 (*format).encoding = ffi::MMAL_ENCODING_OPAQUE;
             } else {
                 (*format).encoding = encoding;
@@ -492,7 +492,7 @@ impl SeriousCamera {
 
             // https://github.com/raspberrypi/userland/blob/master/host_applications/linux/apps/raspicam/RaspiStillYUV.c#L799
 
-            if self.use_encoder {
+            if !self.use_encoder {
                 (*format).encoding = ffi::MMAL_ENCODING_OPAQUE;
             } else {
                 (*format).encoding = encoding;
@@ -724,6 +724,7 @@ impl SeriousCamera {
             // https://github.com/waveform80/picamera/issues/22
             // and the commit message that closed issue #22
             let mut preview_ptr = MaybeUninit::uninit();
+
             let status = ffi::mmal_component_create(
                 ffi::MMAL_COMPONENT_NULL_SINK.as_ptr(),
                 preview_ptr.as_mut_ptr(),
@@ -896,16 +897,16 @@ impl SeriousCamera {
 
             if self.use_encoder {
                 if !self.encoder_output_port_enabled {
-                    match self.enable_encoder_port(){
+                    match self.enable_encoder_port() {
                         Ok(()) => self.encoder_output_port_enabled = true,
-                        Err(e) => eprintln!("{:?}", e), 
+                        Err(e) => eprintln!("{:?}", e),
                     }
                 }
             } else {
                 if !self.still_port_enabled {
-                    match self.enable_still_port(){
-                        Ok(status) => self.still_port_enabled = true,
-                        Err(e) => eprintln!("{:?}", e), 
+                    match self.enable_still_port() {
+                        Ok(_) => self.still_port_enabled = true,
+                        Err(e) => eprintln!("{:?}", e),
                     }
                 }
             }
