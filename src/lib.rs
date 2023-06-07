@@ -896,16 +896,16 @@ impl SeriousCamera {
 
             if self.use_encoder {
                 if !self.encoder_output_port_enabled {
-                    match self.enable_encoder_port(){
-                        Ok(()) => self.encoder_output_port_enabled = true,
-                        Err(e) => eprintln!("{:?}", e), 
+                    match self.enable_encoder_port() {
+                        Ok(_) => self.encoder_output_port_enabled = true,
+                        Err(e) => eprintln!("{:?}", e),
                     }
                 }
             } else {
                 if !self.still_port_enabled {
-                    match self.enable_still_port(){
-                        Ok(status) => self.still_port_enabled = true,
-                        Err(e) => eprintln!("{:?}", e), 
+                    match self.enable_still_port() {
+                        Ok(_) => self.still_port_enabled = true,
+                        Err(e) => eprintln!("{:?}", e),
                     }
                 }
             }
